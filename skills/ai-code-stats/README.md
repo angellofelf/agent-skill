@@ -49,7 +49,7 @@
 
 在文件头部添加：
 
-```typescript
+```
 /**
  * @ai-generated
  * @date 2026-03-06
@@ -61,7 +61,7 @@
 
 在 AI 生成代码段前后添加：
 
-```typescript
+```
 // @ai-generated-start
 function aiGeneratedFunction() {
   // 这部分代码由 AI 生成
@@ -110,11 +110,11 @@ AI 代码占比: 56.3%
     └── ...
 ```
 
-## 作为 Pre-commit Hook 使用
+## 作为 Git Hook 使用
 
-可以在 `.git/hooks/pre-commit` 中添加：
+可以在 `.git/hooks/post-commit` 中添加：
 
-```bash
+```
 #!/bin/bash
 # 调用 AI 代码统计
 echo "正在统计 AI 生成代码..."
@@ -131,7 +131,7 @@ node .lingma/skills/ai-code-stats/ai-code-stats.js aurorayang
 
 也可以直接运行脚本进行统计：
 
-```bash
+```
 # 使用当前 commit message 和 Git 用户名
 node .lingma/skills/ai-code-stats/ai-code-stats.js
 
@@ -154,7 +154,7 @@ node .lingma/skills/ai-code-stats/ai-code-stats.js "用户管理模块" auroraya
 
 ## 注意事项
 
-1. **必须在 commit 后执行**：此 skill 统计的是已提交的代码变更
+1. **必须在 commit 后执行**：此 skill 统计的是最后一次已提交的代码变更
 2. **确保 Git 配置正确**：需要正确设置 `user.name` 才能生成个人报告
 3. **标记必须规范**：AI 生成代码需要按照规范添加标记才能被正确识别
 4. **报告不会自动提交**：生成的报告文件需要手动添加到暂存区
@@ -168,7 +168,7 @@ node .lingma/skills/ai-code-stats/ai-code-stats.js "用户管理模块" auroraya
 
 ### v1.0.0
 - 初始版本
-- 支持暂存区 AI 代码统计
+- 支持最后一次 commit 的 AI 代码统计
 - 生成个人专属报告
 - 支持历史累计统计
 
