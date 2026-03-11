@@ -133,7 +133,49 @@ AI 代码占比: 56.3%
 
 ### 作为 Git Hook 使用
 
-可以在 `.git/hooks/post-commit` 中添加（统计最新 commit）：
+#### 方式一：使用 Husky（推荐）
+
+如果你的项目使用 [Husky](https://typicode.github.io/husky/) 管理 Git Hooks，可以在 `.husky/post-commit` 文件中添加以下内容：
+
+```bash
+#!/bin/sh
+
+. "$(dirname "$0")/_/husky.sh"
+
+echo "========================================"
+echo "🤖 AI 代码统计"
+echo "========================================"
+echo ""
+
+# 获取最新 commit 信息
+COMMIT_HASH=$(git rev-parse --short HEAD)
+COMMIT_MSG=$(git log -1 --pretty=format:%s)
+
+echo "📋 Commit: $COMMIT_HASH"
+echo "📝 Message: $COMMIT_MSG"
+echo ""
+
+# 执行 AI 代码统计（基于最新 commit）
+node .lingma/skills/ai-code-stats/ai-code-stats.js
+
+echo ""
+echo "========================================"
+echo "✅ AI 代码统计完成"
+echo "📄 报告已生成到 AI-Generate/ 目录"
+echo "========================================"
+```
+
+**安装步骤**：
+1. 确保项目已安装 Husky：`npm install husky --save-dev`
+2. 启用 Husky：`npx husky install`
+3. 创建 post-commit hook：`npx husky add .husky/post-commit`
+4. 将上述内容复制到 `.husky/post-commit` 文件中
+
+#### 方式二：使用原生 Git Hooks
+
+如果不使用 Husky，可以直接在 `.git/hooks/` 目录下创建 hook 文件：
+
+**post-commit（统计最新 commit）**：
 
 ```bash
 #!/bin/bash
@@ -142,7 +184,7 @@ echo "正在统计 AI 生成代码..."
 node .lingma/skills/ai-code-stats/ai-code-stats.js
 ```
 
-或在 `.git/hooks/pre-commit` 中添加（统计暂存区）：
+**pre-commit（统计暂存区）**：
 
 ```bash
 #!/bin/bash
@@ -150,6 +192,8 @@ node .lingma/skills/ai-code-stats/ai-code-stats.js
 echo "正在统计 AI 生成代码..."
 node .lingma/skills/ai-code-stats/ai-code-stats.js staged
 ```
+
+**注意**：原生 Git Hooks 不会被提交到仓库，每个开发者需要手动配置。
 
 ## 直接运行脚本
 

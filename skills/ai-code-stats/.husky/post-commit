@@ -1,0 +1,25 @@
+#!/bin/sh
+
+. "$(dirname "$0")/_/husky.sh"
+
+echo "========================================"
+echo "🤖 AI 代码检查"
+echo "========================================"
+echo ""
+
+# 获取最新 commit 信息
+COMMIT_HASH=$(git rev-parse --short HEAD)
+COMMIT_MSG=$(git log -1 --pretty=format:%s)
+
+echo "📋 Commit: $COMMIT_HASH"
+echo "📝 Message: $COMMIT_MSG"
+echo ""
+
+# 执行 AI 代码检查（基于最新 commit）
+node .lingma/skills/ai-code-check/ai-code-check.js
+
+echo ""
+echo "========================================"
+echo "✅ AI 代码检查完成"
+echo "📄 报告已生成到 AI-Generate/ 目录"
+echo "========================================"
