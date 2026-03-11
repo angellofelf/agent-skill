@@ -1,28 +1,113 @@
 ---
 name: ai-code-stats
-description: "统计最后一次 commit 代码的 AI 生成比例，并生成个人报告"
-version: "1.1.0"
+description: "统计代码的 AI 生成比例，并生成个人报告。支持最新 commit、暂存区、指定 commit 和 commit 范围多种模式"
+version: "1.2.0"
 author: "Lingma"
-tags: ["ai-code", "statistics", "git", "post-commit", "report"]
+tags: ["ai-code", "statistics", "git", "pre-commit", "post-commit", "report"]
 trigger: manual
 ---
 
 ## 技能描述
 
-这是一个用于统计最后一次 commit 中 AI 生成代码比例的 skill。它会分析最新已提交 commit 的变更，识别 AI 生成的代码标记，并生成详细的个人报告。
+这是一个用于统计代码中 AI 生成比例的 skill。它支持多种统计模式（最新 commit、暂存区、指定 commit、commit 范围），能够识别 AI 生成的代码标记，并生成详细的个人报告。
 
-**触发命令**: `/ai-stats [task-name] [git-username]` 或 `/aistats [task-name] [git-username]`
+**触发命令**: `/ai-stats [command] [options]` 或 `/aistats [command] [options]`
 
-**参数说明**：
-- `task-name`（可选）：需求/任务名称，不传则使用当前 commit message
-- `git-username`（可选）：Git 用户名，不传则使用 `git config user.name`
+## 命令用法
 
-**示例**：
+### 子命令模式（推荐）
+
 ```
-/ai-stats                                    # 使用默认 commit message 和 Git 用户名
-/ai-stats "用户管理模块"                      # 指定需求名，使用默认 Git 用户名
-/ai-stats "用户管理模块" aurorayang           # 指定需求名和用户名
+/ai-stats                              # 默认：统计最新 commit
+/ai-stats staged                       # 统计暂存区内容
+/ai-stats commit <hash>                # 统计指定 commit
+/ai-stats range <hash1>..<hash2>       # 统计 commit 范围
 ```
+
+**完整参数格式**：
+```
+/ai-stats [command] [commit-hash|range] [task-name] [git-username]
+```
+
+### 兼容模式（旧用法）
+
+```
+/ai-stats                              # 使用默认 commit message 和 Git 用户名
+/ai-stats "用户管理模块"                # 指定需求名，使用默认 Git 用户名
+/ai-stats "用户管理模块" aurorayang     # 指定需求名和用户名
+```
+
+## 子命令详解
+
+### 1. 最新 Commit 统计（默认）
+
+统计最近一次 commit 的代码变更。
+
+```bash
+# 基本用法
+/ai-stats
+
+# 指定需求名
+/ai-stats "用户管理模块"
+
+# 指定需求名和用户名
+/ai-stats "用户管理模块" aurorayang
+```
+
+### 2. 暂存区统计
+
+统计当前暂存区（staged）的代码变更。
+
+```bash
+# 基本用法
+/ai-stats staged
+
+# 指定需求名
+/ai-stats staged "用户管理模块"
+
+# 指定需求名和用户名
+/ai-stats staged "用户管理模块" aurorayang
+```
+
+### 3. 指定 Commit 统计
+
+统计特定 commit hash 的代码变更。
+
+```bash
+# 基本用法
+/ai-stats commit abc1234
+
+# 指定需求名
+/ai-stats commit abc1234 "用户管理模块"
+
+# 指定需求名和用户名
+/ai-stats commit abc1234 "用户管理模块" aurorayang
+```
+
+### 4. Commit 范围统计
+
+统计两个 commit 之间的所有代码变更。
+
+```bash
+# 基本用法
+/ai-stats range abc1234..def5678
+
+# 指定需求名
+/ai-stats range abc1234..def5678 "用户管理模块"
+
+# 指定需求名和用户名
+/ai-stats range abc1234..def5678 "用户管理模块" aurorayang
+```
+
+## 参数说明
+
+| 参数 | 位置 | 说明 | 默认值 |
+|------|------|------|--------|
+| `command` | 第1个 | 子命令：`staged`、`commit`、`range` 或省略 | 省略=最新 commit |
+| `commit-hash` | 第2个 | 当 command 为 `commit` 时的目标 hash | - |
+| `range` | 第2个 | 当 command 为 `range` 时的范围，格式 `hash1..hash2` | - |
+| `task-name` | 倒数第2个 | 需求/任务名称 | 当前 commit message |
+| `git-username` | 最后1个 | Git 用户名 | `git config user.name` |
 
 **报告命名规则**：
 - 有需求名：`ai-code-report-YYYY-MM-DD-需求名.md`
@@ -34,7 +119,8 @@ trigger: manual
 
 ## 功能特性
 
-- 自动检测最后一次 commit 的代码变更
+- **多模式支持**：最新 commit、暂存区、指定 commit、commit 范围
+- 自动检测代码变更
 - 识别 AI 生成代码标记（`@ai-generated`、`@ai-generated-start/end`）
 - 统计 AI 生成代码与人工编写代码的比例
 - 生成个人专属报告（按登录用户名分类存储）
@@ -42,29 +128,36 @@ trigger: manual
 
 ## 执行流程
 
-### 1. 获取用户信息
+### 1. 解析命令参数
+- 识别子命令（staged/commit/range）
+- 提取 commit hash 或范围
+- 获取需求名和用户名
+
+### 2. 获取用户信息
 - 通过 `git config user.name` 获取当前 Git 用户名
 - 作为报告存储目录名称
 
-### 2. 收集最后一次 commit 变更
-- 使用 `git show --numstat HEAD` 获取变更统计
-- 使用 `git show --name-only HEAD` 获取变更文件列表
-- 获取每个文件的详细变更内容
+### 3. 收集代码变更
+根据模式选择不同的 Git 命令：
+- **最新 commit**: `git show --numstat HEAD`
+- **暂存区**: `git diff --cached --numstat`
+- **指定 commit**: `git show --numstat <hash>`
+- **Commit 范围**: `git diff --numstat <range>`
 
-### 3. 识别 AI 生成代码
+### 4. 识别 AI 生成代码
 - 扫描文件头部的 `@ai-generated` 标记
 - 扫描文件中的 `@ai-generated-start` 和 `@ai-generated-end` 标记
 - 统计 AI 生成的代码行数
 
-### 4. 计算统计数据
+### 5. 计算统计数据
 - 总变更文件数
 - 总新增行数 / 总删除行数
 - AI 生成文件数 / AI 生成行数
 - AI 代码占比（按文件数和行数分别计算）
 
-### 5. 生成个人报告
+### 6. 生成个人报告
 - **报告路径**: `{project-root}/AI-Generate/{username}/`
-- **文件名格式**: `ai-code-report-{YYYY-MM-DD-HHmmss}.md`
+- **文件名格式**: `ai-code-report-{YYYY-MM-DD-需求名}.md`
 - **内容包含**:
   - 本次提交统计摘要
   - AI 生成代码详细清单
@@ -139,54 +232,51 @@ trigger: manual
 ## 使用方法
 
 ### 手动触发
-在提交代码前，发送命令：
-```
-# 使用默认 commit message 和 Git 用户名
+
+```bash
+# 默认：统计最新 commit
 /ai-stats
 
-# 指定需求名
-/ai-stats "用户管理模块"
+# 统计暂存区
+/ai-stats staged
+
+# 统计指定 commit
+/ai-stats commit abc1234
+
+# 统计 commit 范围
+/ai-stats range abc1234..def5678
 
 # 指定需求名和用户名
-/ai-stats "用户管理模块" aurorayang
+/ai-stats commit abc1234 "用户管理模块" aurorayang
 ```
-
-**参数说明**：
-- 不传参数：使用当前 commit message 和 Git 用户名
-- 传一个参数：指定需求名
-- 传两个参数：指定需求名和 Git 用户名
-
-当技能被触发时，执行以下操作：
-1. 运行统计脚本：`node .lingma/skills/ai-code-stats/ai-code-stats.js [username] [task-name]`
-2. 分析暂存区代码变更
-3. 识别 AI 生成代码标记
-4. 生成或更新报告到 `AI-Generate/{username}/` 目录
 
 ### 作为 pre-commit hook
+
 可以在 `.git/hooks/pre-commit` 中添加：
-```
+```bash
 #!/bin/bash
 # 调用 AI 代码统计
 echo "正在统计 AI 生成代码..."
-node .lingma/skills/ai-code-stats/ai-code-stats.js
-```
-
-或指定用户名：
-```bash
-node .lingma/skills/ai-code-stats/ai-code-stats.js aurorayang
+node .lingma/skills/ai-code-stats/ai-code-stats.js staged
 ```
 
 ### 直接运行脚本
-也可以直接运行脚本进行统计：
-```
-# 使用当前 commit message 和 Git 用户名
+
+```bash
+# 最新 commit
 node .lingma/skills/ai-code-stats/ai-code-stats.js
 
-# 指定需求名
-node .lingma/skills/ai-code-stats/ai-code-stats.js "用户管理模块"
+# 暂存区
+node .lingma/skills/ai-code-stats/ai-code-stats.js staged
 
-# 指定需求名和用户名
-node .lingma/skills/ai-code-stats/ai-code-stats.js "用户管理模块" aurorayang
+# 指定 commit
+node .lingma/skills/ai-code-stats/ai-code-stats.js commit abc1234
+
+# commit 范围
+node .lingma/skills/ai-code-stats/ai-code-stats.js range abc1234..def5678
+
+# 完整参数示例
+node .lingma/skills/ai-code-stats/ai-code-stats.js commit abc1234 "用户管理模块" aurorayang
 ```
 
 ## AI 代码标记识别规则
@@ -217,17 +307,23 @@ function autoGenerated() {
 🔍 AI 代码统计
 ================
 统计人: zhangsan
+需求名称: 用户管理模块 (命令行指定)
+
+📋 模式: 指定 Commit 检查 (abc1234)
 变更文件: 5 个
 新增行数: 320 行
 删除行数: 45 行
 
 🤖 AI 生成统计
+================
 AI 生成文件: 2 个
 AI 生成行数: 180 行
 AI 代码占比: 56.3%
 
 📄 报告已生成
-路径: AI-Generate/zhangsan/ai-code-report-2024-01-15-143022.md
+================
+模式: 新建报告
+路径: AI-Generate/zhangsan/ai-code-report-2024-01-15-用户管理模块.md
 ```
 
 ## 报告存储结构
@@ -247,29 +343,50 @@ AI 代码占比: 56.3%
 ## 技术实现
 
 ### 使用的 Git 命令
+
+#### 最新 Commit 模式
+```bash
+git show --numstat --format= HEAD
+git show HEAD -- "{file}"
+```
+
+#### 暂存区模式
+```bash
+git diff --cached --numstat
+git diff --cached -- "{file}"
+```
+
+#### 指定 Commit 模式
+```bash
+git show --numstat --format= {hash}
+git show {hash} -- "{file}"
+```
+
+#### Commit 范围模式
+```bash
+git diff --numstat {hash1}..{hash2}
+git diff {hash1}..{hash2} -- "{file}"
+```
+
+### 通用命令
 ```bash
 # 获取当前用户名
 git config user.name
 
-# 获取暂存区统计
-git diff --cached --numstat
-
-# 获取暂存区文件列表
-git diff --cached --name-only
-
-# 获取文件变更内容
-git diff --cached -- {file}
-
-# 获取即将提交的 commit 信息（如有）
+# 获取即将提交的 commit 信息
 git log -1 --pretty=format:%s HEAD
+
+# 获取暂存区 tree hash
+git write-tree
 ```
 
 ### 文件检测逻辑
-1. 读取每个变更文件的内容
-2. 检查文件头部是否包含 `@ai-generated` 标记
-3. 扫描文件内容中的 `@ai-generated-start` 和 `@ai-generated-end` 标记对
-4. 计算标记范围内的代码行数
-5. 累加得到 AI 生成代码总行数
+1. 根据模式选择对应的 Git 命令获取变更
+2. 读取每个变更文件的内容
+3. 检查文件头部是否包含 `@ai-generated` 标记
+4. 扫描文件内容中的 `@ai-generated-start` 和 `@ai-generated-end` 标记对
+5. 计算标记范围内的代码行数
+6. 累加得到 AI 生成代码总行数
 
 ## 配置选项
 
@@ -281,6 +398,8 @@ git log -1 --pretty=format:%s HEAD
 - `.mpx` - MPX 小程序框架
 - `.vue` - Vue 单文件组件
 - `.less` / `.scss` / `.css` - 样式文件
+- `.json` - JSON 文件
+- `.md` - Markdown 文件
 
 ### 排除路径
 以下路径的文件会被自动排除：
@@ -288,20 +407,37 @@ git log -1 --pretty=format:%s HEAD
 - `dist/`
 - `build/`
 - `.git/`
-- 测试文件（`*.test.*`, `*.spec.*`）
+- `.lingma/`
+- `AI-Generate/`（避免自引用）
 
 ## 注意事项
 
-1. **必须在 commit 前执行**：此 skill 统计的是暂存区（staged）代码
+1. **模式选择**：
+   - `staged` 模式检查暂存区内容，适合 pre-commit 场景
+   - `commit` 模式检查已提交的特定 commit
+   - `range` 模式适合统计一个功能分支的所有变更
+
 2. **确保 Git 配置正确**：需要正确设置 `user.name` 才能生成个人报告
+
 3. **标记必须规范**：AI 生成代码需要按照规范添加标记才能被正确识别
+
 4. **报告不会自动提交**：生成的报告文件需要手动添加到暂存区
+
+5. **重复统计防护**：
+   - 相同 commit hash 不会重复生成报告
+   - 相同文件内容（blob hash）不会重复统计
 
 ## 版本历史
 
+### v1.2.0
+- 新增子命令支持：`staged`、`commit`、`range`
+- 支持统计指定 commit 的代码
+- 支持统计 commit 范围的代码
+- 优化参数解析逻辑，兼容旧用法
+
 ### v1.1.0
 - 新增用户名参数支持
-- 支持 `/ai-stats [username]` 格式
+- 支持 `/ai-stats [task-name] [username]` 格式
 - 不传参数时默认使用 Git 用户名
 
 ### v1.0.0
