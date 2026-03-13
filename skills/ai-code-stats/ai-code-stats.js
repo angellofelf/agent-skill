@@ -251,7 +251,14 @@ function getRangeFileDiff(filePath, range) {
 function shouldExclude(filePath) {
   // 注意：AI-Generate/ 目录下的文件需要提交到 git，但在统计时要排除
   // 避免自引用（统计自身生成的报告）
-  const excludePatterns = ['node_modules/', 'dist/', 'build/', '.git/', '.lingma/'];
+  const excludePatterns = [
+    'node_modules/',
+    'dist/',
+    'build/',
+    '.git/',
+    '.lingma/skills/ai-code-stats/',  // 排除 skill 自身代码变更
+    '.lingma/skills/ai-code-check/',  // 排除 check skill 代码变更
+  ];
   return excludePatterns.some((pattern) => filePath.includes(pattern));
 }
 
